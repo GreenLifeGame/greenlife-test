@@ -62,8 +62,23 @@
          instead of keeping them as one centred block. */
       .screen-scroll::before,
       .screen-scroll::after { content: ""; margin: auto; flex: 0 0 0; }
+
+      /* ── THE BOTTOM NAV HAS THE SAME PROBLEM ──────────────────────────────
+         The game shell is `height: 100dvh` with the nav as its last flex child,
+         which is correct — except `dvh` only accounts for real browser CHROME.
+         Phantom's bar is an OVERLAY drawn on top of the page, so dvh knows
+         nothing about it and the nav renders underneath: invisible, untappable,
+         and with `overflow: hidden` on the shell there is nothing to scroll to
+         reach it. Cody had no navigation at all.
+
+         Extra room only on phone-width screens, where those in-app browsers
+         live. A desktop browser has no floating bar and gets no wasted space. */
+      @media (max-width: 640px) {
+        .nav-safe { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important; }
+      }
+      .nav-safe { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     </style>
-    <script type="module" crossorigin src="/admin/assets/index-Bi8CVtZV.js"></script>
+    <script type="module" crossorigin src="/admin/assets/index-HZktBMEu.js"></script>
   </head>
   <body>
     <div id="root"></div>
