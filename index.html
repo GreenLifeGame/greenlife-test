@@ -2,14 +2,48 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover is required for env(safe-area-inset-*) to report
+         anything but 0 on a notched phone. Without it the padding below is
+         silently a no-op on exactly the devices that need it. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>GREEN LIFE — dev preview</title>
     <!-- Tailwind via CDN: dev-preview only, so the 2D UI styling renders. Not used in production. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       html, body, #root { height: 100%; margin: 0; background: #141416; }
+
+      /* ── MOBILE IN-APP BROWSERS COVER THE BOTTOM OF THE PAGE ──────────────
+         Phantom's in-app browser (and Metamask's, and Instagram's) float a bar
+         over the bottom ~80px of the viewport. It is NOT part of the page, so
+         100vh includes the space underneath it — meaning a button sitting at
+         the bottom of a full-height screen is rendered *behind* that bar and
+         cannot be tapped. Cody hit exactly this trying to buy in: the Continue
+         button was unreachable and the page would not scroll any further.
+
+         Two separate problems, two fixes:
+
+         1. `min-h-screen` + `items-center justify-center` CLIPS content taller
+            than the viewport. Flexbox centring pushes the overflow off BOTH
+            ends, and the part above the top edge cannot be scrolled to at all.
+            `justify-start` past a certain height, plus auto margins, keeps it
+            centred when it fits and scrollable when it does not.
+         2. Even scrolled to the end, the last ~80px sits under the browser bar.
+            The padding below reserves room for it. 88px is measured against
+            Phantom's bar; the safe-area inset is added on top for notched
+            devices, where it is 0 on everything else. */
+      .screen-scroll {
+        min-height: 100dvh;                 /* dvh excludes the browser chrome; vh does not */
+        padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+        justify-content: flex-start;
+      }
+      /* Re-centre only when there is genuinely room, so short screens still
+         look centred instead of pinned to the top. */
+      @media (min-height: 720px) {
+        .screen-scroll { justify-content: center; }
+      }
+      .screen-scroll > * { margin-top: auto; margin-bottom: auto; }
     </style>
-    <script type="module" crossorigin src="/assets/index-BYCQNNwq.js"></script>
+    <script type="module" crossorigin src="/assets/index-BDnr_1Y6.js"></script>
   </head>
   <body>
     <div id="root"></div>
