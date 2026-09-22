@@ -12,8 +12,28 @@
     <style>
       /* height:100% PINS the document to the viewport, so content taller than
          it overflows instead of making the page grow. min-height lets the
-         document actually get longer, which is what makes it scrollable. */
-      html, body, #root { min-height: 100%; margin: 0; background: #141416; }
+         document actually get longer, which is what makes it scrollable.
+
+         ⚠️ `max(100%, 100vh)` IS A SECOND SAFETY NET, NOT REDUNDANT WITH IT.
+         Cody's own screenshot from Phantom's in-app browser (Android S22+)
+         still showed a solid dead gap between the game's bottom nav and
+         Phantom's toolbar AFTER the shell's own height was already switched
+         from `100dvh` to a JS-measured `window.innerHeight`/
+         `visualViewport.height` value (see the `appVh` comment in
+         green-game.jsx). That means the JS measurement ITSELF is coming back
+         smaller than the real available space in this specific embedded
+         WebView — the same "resolves once, to a smaller worst-case figure"
+         failure mode the original `dvh` fix was written to avoid, just hit
+         again one layer down. `100%` here inherits from the initial
+         containing block (the true viewport), which browsers keep in sync
+         continuously as part of layout — it does not depend on a resize
+         event firing, unlike `dvh` or JS `innerHeight`. `100vh` is kept
+         alongside it as a floor because `100vh` is normally the TALLER of
+         the two on a mobile in-app browser (see the `.screen-scroll` block
+         below) — `max()` takes whichever of the two is actually larger, so
+         the document can never come up short of the real screen regardless
+         of which single metric this WebView happens to under-report. */
+      html, body, #root { min-height: max(100%, 100vh); margin: 0; background: #141416; }
 
       /* ── MOBILE IN-APP BROWSERS COVER THE BOTTOM OF THE PAGE ──────────────
          Phantom's in-app browser (and Metamask's, and Instagram's) float a bar
@@ -78,7 +98,7 @@
       }
       .nav-safe { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     </style>
-    <script type="module" crossorigin src="/assets/index-T7x_rmJq.js"></script>
+    <script type="module" crossorigin src="/assets/index-CutgH4g4.js"></script>
   </head>
   <body>
     <div id="root"></div>
