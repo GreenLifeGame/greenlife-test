@@ -19,30 +19,45 @@
          that shell is PINNED to exactly the viewport height. `min-height`
          is a FLOOR, not a pin — once real content (e.g. a tall Smoking
          Friends panel) exceeds it, `#root` grows to fit that content
-         instead of staying viewport-sized, the inner shell's own
-         `height: max(px, 100%)` inherits that INFLATED number instead of
-         the true viewport height, and the whole PAGE starts scrolling with
-         the nav dragged down to the bottom of it — exactly the regression
-         Cody hit here. `height` (not min) + `overflow: hidden` pins this
-         chain to the real viewport no matter how tall the content gets, so
-         all scrolling stays where it belongs: inside that one inner panel.
+         instead of staying viewport-sized, the inner shell's own height
+         inherits that INFLATED number instead of the true viewport height,
+         and the whole PAGE starts scrolling with the nav dragged down to
+         the bottom of it — exactly the regression Cody hit here. `height`
+         (not min) + `overflow: hidden` pins this chain to the real
+         viewport no matter how tall the content gets, so all scrolling
+         stays where it belongs: inside that one inner panel.
 
-         `max(100%, 100vh)`: Cody's own screenshot from Phantom's in-app
-         browser (Android S22+) showed a solid dead gap between the game's
-         bottom nav and Phantom's toolbar AFTER the shell's height was
-         already switched from `100dvh` to a JS-measured
-         `window.innerHeight`/`visualViewport.height` value (see the
-         `appVh` comment in green-game.jsx) — that JS measurement is ALSO
-         coming back smaller than the real available space in this specific
-         WebView, the same "resolves once, to a smaller worst-case figure"
-         failure the original `dvh` fix was written to avoid, one layer
-         down. `100%` here inherits from the initial containing block (the
-         true viewport), which browsers keep in sync continuously as part
-         of layout — no resize event needs to fire, unlike `dvh` or JS
-         `innerHeight`. `100vh` is kept alongside it as a floor because
-         `100vh` is normally the TALLER of the two on a mobile in-app
-         browser (see the `.screen-scroll` block below) — `max()` takes
-         whichever is actually larger, so this can never come up short.
+         ⚠️ CORRECTED AGAIN — `max(100%, 100vh)` was ITSELF the dead-gap
+         bug, not a fix for it. Researched properly this time (Cody: "go
+         research it") instead of guessing a third time. `max()` always
+         prefers the LARGER operand, and on mobile `100vh` is defined
+         against the browser's LARGEST possible viewport (its own toolbar
+         fully collapsed) — it is NOT the current visible area whenever
+         that toolbar is actually showing (Phantom's URL bar, in Cody's
+         screenshot), which is its normal resting state. So this rule was,
+         by construction, sized TALLER than the real visible area almost
+         all the time, and the difference is exactly the dead gap below
+         the nav. Swap in ANY value here that is even occasionally the
+         larger one — a JS snapshot, `100%` — and `max()` guarantees the
+         bug survives, because it can only ever move toward the too-tall
+         side.
+
+         `dvh` ("dynamic viewport height") is the unit built to solve this:
+         unlike `vh`, it tracks the REAL current visible area and updates
+         LIVE as the toolbar shows or hides, with zero javascript — so it
+         can never go stale the way a resize-event-driven measurement can.
+         It reached Baseline (all major engines, effectively all real
+         traffic) in June 2025. The `.screen-scroll` class two rules down
+         has used plain `dvh` for every onboarding screen this whole
+         time with no reported gap — real proof, in this exact file, that
+         dvh alone already renders correctly on Cody's own devices. This
+         rule is now the same two-line fallback-then-override pattern:
+         `100vh` first (skipped entirely by any engine that also
+         understands `dvh`), `100dvh` second, which WINS wherever it is
+         supported and is simply invalid (thus ignored, per how CSS always
+         handles a property it does not recognize) everywhere it is not —
+         never a `max()`, `min()` or other blend of the two, because
+         blending is exactly what let the too-tall value win before.
 
          ⚠️ NO `overflow: hidden` HERE, DELIBERATELY. The onboarding stages
          (`.screen-scroll`, below) rely on the DOCUMENT itself being
@@ -56,7 +71,12 @@
          doesn't need it either: it already sets its OWN `overflow:
          "hidden"` on its own div, which is what keeps IT pinned to exactly
          this height with only its one inner content panel scrolling. */
-      html, body, #root { height: max(100%, 100vh); margin: 0; background: #141416; }
+      html, body, #root {
+        height: 100vh; /* fallback only — an engine with no dvh support at all */
+        height: 100dvh; /* wins wherever supported; tracks the real visible area live */
+        margin: 0;
+        background: #141416;
+      }
 
       /* ── MOBILE IN-APP BROWSERS COVER THE BOTTOM OF THE PAGE ──────────────
          Phantom's in-app browser (and Metamask's, and Instagram's) float a bar
@@ -121,7 +141,7 @@
       }
       .nav-safe { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     </style>
-    <script type="module" crossorigin src="/admin/assets/index-C_wM7wSt.js"></script>
+    <script type="module" crossorigin src="/admin/assets/index-PkeCrV_b.js"></script>
   </head>
   <body>
     <div id="root"></div>
